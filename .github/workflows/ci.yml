@@ -39,5 +39,9 @@ jobs:
       - name: Install Dependencies
         run: pnpm install
 
+      - name: Mask API Endpoint
+        run: |
+          echo "::add-mask::${{ secrets.API_ENDPOINT }}"
+
       - name: Deploy
         run: npx sst deploy --stage prod
