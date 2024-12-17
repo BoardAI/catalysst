@@ -4,7 +4,7 @@ import {
   getDeploymentStartedComment,
   getDeploymentSuccessComment,
 } from "./comments.js";
-import { config } from "./config.js";
+import { loadConfig } from "./config.js";
 
 const APP_ID = parseInt(getEnv("APP_ID"));
 
@@ -78,7 +78,7 @@ export default (app: Probot) => {
       let checkRunId = undefined;
 
       try {
-        const tableComment = getDeploymentStartedComment(stage);
+        const tableComment = await getDeploymentStartedComment(context, stage);
 
         // post a comment on the PR
         await getOrUpdateComment(context, pr.number, tableComment);
@@ -148,18 +148,70 @@ export default (app: Probot) => {
     const owner = context.payload.repository.owner.login;
     const repo = context.payload.repository.name;
     const stage = deployment.environment;
+    const config = await loadConfig(context);
+
+    const isPrDeployment = stage.startsWith("pr-");
+    const isStaticEnv = Object.keys(config.branchMappings).includes(stage);
 
     /**
      * Check if the deployment status is success or failure and if it's a PR deployment.
      */
     if (
       !["success", "failure"].includes(deploymentStatus.state) ||
-      !stage.startsWith("pr-")
+      !(isPrDeployment || isStaticEnv)
     ) {
-      app.log.info(
-        "Ignoring deployment status created event. Not a PR deployment or not a success/failure state."
-      );
+      app.log.info("Ignoring deployment status created event.");
       return;
+    }
+
+    const res = await context.octokit.checks.listForRef({
+      owner,
+      repo,
+      ref: deployment.sha,
+      app_id: APP_ID,
+    });
+
+    const checkRun = res.data.check_runs.find(
+      (c) => c.status === "in_progress"
+    );
+
+    if (isStaticEnv && checkRun) {
+      // for static envs, just update the check run status
+      if (deploymentStatus.state === "success") {
+        await context.octokit.checks.update({
+          owner,
+          repo,
+          check_run_id: checkRun.id,
+          status: "completed",
+          conclusion: "success",
+          details_url: deploymentStatus.log_url,
+          completed_at: new Date().toISOString(),
+          output: {
+            title: "Deployment Successful",
+            summary: `Deployment to **${deployment.environment}** was successful.`,
+          },
+        });
+
+        return;
+      }
+
+      if (deploymentStatus.state === "failure") {
+        await context.octokit.checks.update({
+          owner,
+          repo,
+          check_run_id: checkRun.id,
+          status: "completed",
+          conclusion: "failure",
+          details_url: deploymentStatus.log_url,
+          completed_at: new Date().toISOString(),
+          output: {
+            title: "Deployment Failed",
+            summary: `Deployment to **${deployment.environment}** failed.`,
+          },
+        });
+
+        return;
+      }
     }
 
     const prNumber = stage.replace("pr-", "");
@@ -171,17 +223,6 @@ export default (app: Probot) => {
 
     const existingComment = comments.data.find(
       (comment) => comment.performed_via_github_app?.id === APP_ID
-    );
-
-    const res = await context.octokit.checks.listForRef({
-      owner,
-      repo,
-      ref: deployment.sha,
-      app_id: APP_ID,
-    });
-
-    const checkRun = res.data.check_runs.find(
-      (c) => c.status === "in_progress"
     );
 
     if (!existingComment || !checkRun) {
@@ -246,7 +287,8 @@ export default (app: Probot) => {
         },
       });
 
-      const failureComment = getDeploymentFailureComment(
+      const failureComment = await getDeploymentFailureComment(
+        context,
         stage,
         deploymentStatus.log_url!
       );
@@ -267,11 +309,12 @@ export default (app: Probot) => {
    */
   app.on("pull_request.closed", async (context) => {
     const pr = context.payload.pull_request;
+    const stage = `pr-${pr.number}`;
 
     const deployments = await context.octokit.repos.listDeployments({
       owner: context.payload.repository.owner.login,
       repo: context.payload.repository.name,
-      environment: `pr-${pr.number}`,
+      environment: stage,
     });
 
     const deploymentId = deployments.data[0].id;
@@ -287,23 +330,30 @@ export default (app: Probot) => {
       await context.octokit.repos.deleteAnEnvironment({
         owner,
         repo,
-        environment_name: `pr-${pr.number}`,
+        environment_name: stage,
       });
       app.log.info("Deleted environment");
+    } catch (e) {
+      // ignore error if environment doesn't exist (deleted manually)
+    }
 
+    const config = await loadConfig(context);
+
+    try {
       await context.octokit.actions.createWorkflowDispatch({
         owner,
         repo,
         workflow_id: config.workflowId,
         ref: config.defaultBranch, // original branch could be deleted (squash merge)
         inputs: {
-          stage: `pr-${pr.number}`,
+          stage,
           action: "remove",
         },
       });
 
       app.log.info("Triggered workflow to destroy resources");
     } catch (error) {
+      console.log("error", error);
       app.log.error("Error deleting environment:", error);
     }
   });
@@ -315,6 +365,7 @@ export default (app: Probot) => {
   app.on("push", async (context) => {
     const ref = context.payload.ref;
     const branch = ref.replace("refs/heads/", "");
+    const config = await loadConfig(context);
 
     const staticBranches = Object.keys(config.branchMappings);
 
@@ -336,6 +387,20 @@ export default (app: Probot) => {
       inputs: {
         stage,
         action: "deploy",
+      },
+    });
+
+    // Create a check run to track the deployment status
+    await context.octokit.checks.create({
+      owner,
+      repo,
+      name: `SST - ${stage}`,
+      head_sha: context.payload.after,
+      status: "in_progress",
+      started_at: new Date().toISOString(),
+      output: {
+        title: "Deployment in Progress",
+        summary: `Deployment to **${stage}** is in progress.`,
       },
     });
   });

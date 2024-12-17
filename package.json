@@ -1,11 +1,12 @@
 {
-  "name": "sst-deploy",
+  "name": "catalysst",
   "version": "1.0.0",
   "private": true,
   "description": "Supercharge your SST deployments",
   "author": "Victor Ndaba",
   "license": "ISC",
-  "homepage": "https://github.com//",
+  "packageManager": "pnpm@9.12.3",
+  "homepage": "https://github.com/ndaba1/catalysst",
   "keywords": [
     "probot",
     "github",
@@ -19,11 +20,14 @@
   "dependencies": {
     "@probot/adapter-aws-lambda-serverless": "^4.0.0",
     "date-fns": "^4.1.0",
+    "lodash.merge": "^4.6.2",
     "probot": "^13.0.1",
-    "sst": "3.4.11"
+    "sst": "3.4.11",
+    "yaml": "^2.6.1"
   },
   "devDependencies": {
     "@types/aws-lambda": "8.10.146",
+    "@types/lodash.merge": "^4.6.9",
     "@types/node": "^20.0.0",
     "nock": "^14.0.0-beta.5",
     "smee-client": "^2.0.0",

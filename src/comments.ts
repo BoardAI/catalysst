@@ -1,8 +1,14 @@
 import { format } from "date-fns/format";
-import { config } from "./config.js";
+import { loadConfig } from "./config.js";
+import { Context } from "probot";
 
-export function getDeploymentFailureComment(stage: string, logsUrl: string) {
+export async function getDeploymentFailureComment(
+  ctx: Context,
+  stage: string,
+  logsUrl: string
+) {
   const date = format(new Date(), "MMMM d, yyyy h:mmaaa");
+  const config = await loadConfig(ctx);
 
   return `
 ❌ **Deployment Failed** for the **\`${stage}\`** stage.
@@ -41,8 +47,9 @@ ${tableRows}
 `;
 }
 
-export function getDeploymentStartedComment(stage: string) {
+export async function getDeploymentStartedComment(ctx: Context, stage: string) {
   const date = format(new Date(), "MMMM d, yyyy h:mmaaa");
+  const config = await loadConfig(ctx);
 
   return `
 🚀 **Deployment Triggered** for the **\`${stage}\`** stage.  
