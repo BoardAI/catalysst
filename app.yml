@@ -142,11 +142,10 @@ default_permissions:
 # name: My Probot App
 
 # The homepage of your GitHub App.
-url: https://github.com/ndaba1/catalysst
+url: https://github.com/boardai/catalysst
 
 # A description of the GitHub App.
 description: Supercharge your SST deployments
-
 # Set to true when your GitHub App is available to the public or false when it is only accessible to the owner of the app.
 # Default: true
-# public: false
+public: false

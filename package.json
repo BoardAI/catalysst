@@ -6,7 +6,7 @@
   "author": "Victor Ndaba",
   "license": "ISC",
   "packageManager": "pnpm@9.12.3",
-  "homepage": "https://github.com/ndaba1/catalysst",
+  "homepage": "https://github.com/procuro/catalysst",
   "keywords": [
     "probot",
     "github",

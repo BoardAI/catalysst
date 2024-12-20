@@ -4,8 +4,8 @@ import merge from "lodash.merge"; // Install lodash with `npm install lodash`
 
 const defaultConfig = {
   sstWorkspace: "procuro",
-  defaultBranch: "feat/ci-cd-actions",
-  workflowId: "sst",
+  defaultBranch: "main",
+  workflowId: "sst.yml",
   branchMappings: {
     staging: "staging",
     main: "prod",
