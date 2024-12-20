@@ -112,7 +112,7 @@ export default (app: Probot) => {
         await context.octokit.actions.createWorkflowDispatch({
           owner,
           repo,
-          workflow_id: "sst.yml",
+          workflow_id: "sst",
           ref,
           inputs: {
             stage,
