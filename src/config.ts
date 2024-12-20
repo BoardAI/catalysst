@@ -3,11 +3,11 @@ import YAML from "yaml";
 import merge from "lodash.merge"; // Install lodash with `npm install lodash`
 
 const defaultConfig = {
-  sstWorkspace: "build0",
-  defaultBranch: "main",
+  sstWorkspace: "procuro",
+  defaultBranch: "feat/ci-cd-actions",
   workflowId: "sst.yml",
   branchMappings: {
-    dev: "dev",
+    staging: "staging",
     main: "prod",
   },
 };
