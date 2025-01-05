@@ -73,7 +73,7 @@ export default (app: Probot) => {
       const { owner, repo } = getRepoDetails(context);
       const pr = context.payload.pull_request;
       const ref = pr.head.ref;
-      const stage = `pr-${pr.number}`;
+      const stage = `pr${pr.number}`;
 
       let checkRunId = undefined;
 
@@ -150,7 +150,7 @@ export default (app: Probot) => {
     const stage = deployment.environment;
     const config = await loadConfig(context);
 
-    const isPrDeployment = stage.startsWith("pr-");
+    const isPrDeployment = stage.startsWith("pr");
     const isStaticEnv = Object.keys(config.branchMappings).includes(stage);
 
     /**
@@ -214,7 +214,7 @@ export default (app: Probot) => {
       }
     }
 
-    const prNumber = stage.replace("pr-", "");
+    const prNumber = stage.replace("pr", "");
     const comments = await context.octokit.issues.listComments({
       owner,
       repo,
@@ -309,7 +309,7 @@ export default (app: Probot) => {
    */
   app.on("pull_request.closed", async (context) => {
     const pr = context.payload.pull_request;
-    const stage = `pr-${pr.number}`;
+    const stage = `${pr.number}`;
 
     const deployments = await context.octokit.repos.listDeployments({
       owner: context.payload.repository.owner.login,
